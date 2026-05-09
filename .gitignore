@@ -1,0 +1,73 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code related
+.vscode/
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Android related
+**/android/**/generated/
+**/android/gen/
+**/android/out/
+**/android/bin/
+android/local.properties
+android/key.properties
+android/app/src/main/res/raw/google_services.json
+*.keystore
+*.jks
+
+# iOS related
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/ServiceDefinitions.json
+**/ios/Runner/GeneratedPluginRegistrant.[mh]
+**/ios/Runner/config.json
+Pods/
+.xcworkspace/
+xcuserdata/
+DerivedData/
+
+# Web related
+.web/
+
+# Environment files
+.env*
+!.env.example
+
+# Symbolication/Obfuscation
+app.*.symbols
+app.*.map.json
+
+# Mac OS metadata
+.DS_Store

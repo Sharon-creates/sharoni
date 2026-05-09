@@ -1,0 +1,28 @@
+﻿Analyzing sharoni...                                            
+
+   info - Use 'const' with the constructor to improve performance - lib\core\theme.dart:16:20 - prefer_const_constructors
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\auth\presentation\auth_controller.dart:30:17 - unused_catch_stack
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\auth\presentation\auth_controller.dart:41:17 - unused_catch_stack
+warning - Unused import: 'package:sharoni/features/home/presentation/home_scaffold.dart' - lib\features\auth\presentation\login_page.dart:6:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\login_page.dart:61:47 - deprecated_member_use
+warning - Unused import: 'package:sharoni/features/home/presentation/home_scaffold.dart' - lib\features\auth\presentation\profile_setup_page.dart:4:8 - unused_import
+warning - Unused import: 'package:sharoni/features/auth/presentation/profile_setup_page.dart' - lib\features\auth\presentation\signup_page.dart:5:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\signup_page.dart:67:47 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\auth\presentation\signup_page.dart:110:66 - deprecated_member_use
+warning - Unused import: 'package:sharoni/features/auth/presentation/auth_controller.dart' - lib\features\home\presentation\home_page.dart:4:8 - unused_import
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:109:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:111:63 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:123:64 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:335:42 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:356:35 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:393:26 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\home\presentation\home_page.dart:403:41 - deprecated_member_use
+warning - The stack trace variable 'st' isn't used and can be removed - lib\features\medication\presentation\medication_controller.dart:137:17 - unused_catch_stack
+warning - The declaration '_addTime' isn't referenced - lib\features\medication\presentation\medication_page.dart:22:8 - unused_element
+warning - The declaration '_removeTime' isn't referenced - lib\features\medication\presentation\medication_page.dart:28:8 - unused_element
+   info - Don't use 'BuildContext's across async gaps - lib\features\medication\presentation\medication_page.dart:216:37 - use_build_context_synchronously
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\medication\presentation\medication_page.dart:279:44 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\medication\presentation\medication_page.dart:282:91 - deprecated_member_use
+   info - 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss - lib\features\medication\presentation\medication_page.dart:316:52 - deprecated_member_use
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\features\medication\presentation\medication_page.dart:339:21 - deprecated_member_use
+

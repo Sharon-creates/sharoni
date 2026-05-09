@@ -1,0 +1,102 @@
+CHAPTER THREE: SYSTEM DESIGN & ARCHITECTURE DIAGRAMS
+
+This file contains the visual blueprints for the system using clear, human-readable ASCII art. You can copy these directly into your thesis document.
+
+--------------------------------------------------------------------------------
+DIAGRAM 1: SYSTEM ARCHITECTURE (THE BIG PICTURE)
+--------------------------------------------------------------------------------
+
+   +--------------------------+          +--------------------------+
+   |  USER INTERFACE (FACE)   |          |  COMMUNICATION LAYER     |
+   |                          |          |                          |
+   | +----------------------+ | Updates  | +----------------------+ |
+   | |   MOBILE APP (FLUTTER) |<-------->| |  WHATSAPP / FACEBOOK | |
+   | +----------------------+ |          | +----------------------+ |
+   +------------^-------------+          +------------^-------------+
+                |                                     |
+                | Sends Data / Gets Advice            | Sends Alerts
+                |                                     |
+   +------------v-------------------------------------v-------------+
+   |            CLOUD SERVICES (THE BRAIN & MEMORY)                 |
+   |                                                                |
+   |  +-----------------------+        +--------------------------+ |
+   |  |   SUPABASE DATABASE   | <----> |    AI ENGINE (BIOBERT)   | |
+   |  | (Secure Filing Cabinet)|        |   (Intelligence Layer)   | |
+   |  +-----------------------+        +--------------------------+ |
+   |                                                                |
+   +----------------------------------------------------------------+
+
+DESCRIPTION:
+This is the architecture of the system. It shows how the "Face" (Flutter App) talks to the "Memory" (Supabase) and the "Brain" (AI Engine). It also shows the communication layer that handles reminders through messaging apps.
+
+--------------------------------------------------------------------------------
+DIAGRAM 2: SYMPTOM ANALYSIS FLOW (THE LOGIC)
+--------------------------------------------------------------------------------
+
+   USER                MOBILE APP               AI ENGINE           DATABASE
+     |                     |                        |                   |
+     |---Describe Sympton->|                        |                   |
+     |   ("My head hurts") |                        |                   |
+     |                     |----Send Description--->|                   |
+     |                     |    + User Profile      |                   |
+     |                     |                        |---Analyze Data--->|
+     |                     |                        |<--Return Advice---|
+     |                     |<----Return Results-----|                   |
+     |                     |                        |                   |
+     |                     |---------Save Record to History------------>|
+     |                     |                        |                   |
+     |<---Show First Aid---|                        |                   |
+     |      Advice         |                        |                   |
+
+DESCRIPTION:
+This flow diagram shows the "conversation" between different parts of the system when a user logs a symptom. It explains how the system translates a human's story into a medical analysis, saves it for future reference, and provides instant advice.
+
+--------------------------------------------------------------------------------
+DIAGRAM 3: DATABASE DESIGN (THE FILING CABINET)
+--------------------------------------------------------------------------------
+
+   +-------------------+          +-------------------+
+   |       USER        |          |    SYMPTOM_LOG    |
+   |-------------------|          |-------------------|
+   | - User_ID (Key)   |          | - Log_ID (Key)    |
+   | - Username        |          | - User_ID (Link)  |
+   | - Age             |----------| - Description     |
+   | - Health History  |          | - AI_Analysis     |
+   | - Allergies       |          | - Timestamp       |
+   +-------------------+          +-------------------+
+            |
+            |                      +-------------------+
+            |                      |  MEDICATION_PLAN  |
+            |                      |-------------------|
+            +----------------------| - Med_ID (Key)    |
+                                   | - User_ID (Link)  |
+                                   | - Drug_Name       |
+                                   | - Dosage / Time   |
+                                   +-------------------+
+
+DESCRIPTION:
+This diagram shows the logic of our digital filing cabinet. Everything centers around the User. Because the logs and medication plans are tied to a specific ID, the system can provide personalized care and keep your health history organized over time.
+
+--------------------------------------------------------------------------------
+DIAGRAM 4: DEVELOPMENT METHODOLOGY (AGILE CYCLE)
+--------------------------------------------------------------------------------
+
+           (1) PLANNING
+          Define Features
+                |
+                v
+           (2) DESIGN
+          Draw Blueprints
+                ^       |
+                |       v
+           (4) TESTING <--- (3) DEVELOPMENT
+          Check for Bugs      Build Features
+                |
+                v
+          (5) DEPLOYMENT
+          Launch to User
+                |
+                +---> Back to (1) for next update
+
+DESCRIPTION:
+This diagram shows the "Iterative Garden" approach. Instead of building the whole app at once, we build small pieces, test them, and then improve them. This visualizes the Agile methodology we used to ensure the app is safe and effective.
