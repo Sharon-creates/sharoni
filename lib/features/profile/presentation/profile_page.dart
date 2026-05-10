@@ -5,6 +5,7 @@ import 'package:sharoni/features/auth/presentation/auth_controller.dart';
 import 'package:sharoni/features/profile/presentation/profile_controller.dart';
 import 'package:sharoni/core/models/profile.dart';
 import 'package:sharoni/features/home/presentation/navigation_controller.dart';
+import 'package:sharoni/core/services/notification_service.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});

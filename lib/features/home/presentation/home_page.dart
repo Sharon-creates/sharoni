@@ -503,7 +503,7 @@ class HomePage extends ConsumerWidget {
         _buildActionCard(
           context,
           'Symptom Tracker',
-          Icons.search_off,
+          Icons.add_chart,
           AppTheme.secondaryColor,
           onTap: () => ref.read(navigationControllerProvider.notifier).state = 1,
         ),

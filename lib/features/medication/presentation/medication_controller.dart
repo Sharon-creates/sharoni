@@ -132,14 +132,17 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
       
       if (status == 'taken') {
         final meds = state.value ?? [];
-        final med = meds.firstWhere((m) => m.id == medicationId);
-        if (med.remainingQuantity != null) {
-          final dosageValue = double.tryParse(med.dosagePerIntake.split(' ').first) ?? 1;
-          final updatedMed = med.copyWith(
-            remainingQuantity: (med.remainingQuantity! - dosageValue).clamp(0, double.infinity).toInt(),
-          );
-          await _repository.updateMedication(updatedMed);
-          await loadMedications();
+        final medIndex = meds.indexWhere((m) => m.id == medicationId);
+        if (medIndex != -1) {
+          final med = meds[medIndex];
+          if (med.remainingQuantity != null) {
+            final dosageValue = double.tryParse(med.dosagePerIntake.split(' ').first) ?? 1.0;
+            final updatedMed = med.copyWith(
+              remainingQuantity: (med.remainingQuantity! - dosageValue).toInt().clamp(0, 9999),
+            );
+            await _repository.updateMedication(updatedMed);
+            await loadMedications();
+          }
         }
       }
     } catch (e) {

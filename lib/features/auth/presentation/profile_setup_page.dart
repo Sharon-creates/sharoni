@@ -20,15 +20,23 @@ class _ProfileSetupPageState extends ConsumerState<ProfileSetupPage> {
   String? _selectedSex;
 
   Future<void> _finishSetup() async {
-    await ref.read(profileControllerProvider.notifier).updateProfile(
-      age: _ageController.text,
-      height: _heightController.text,
-      weight: _weightController.text,
-      sex: _selectedSex,
-      bloodType: _bloodTypeController.text,
-      medicalConditions: _medicalConditionsController.text,
-      allergies: _allergiesController.text,
-    );
+    try {
+      await ref.read(profileControllerProvider.notifier).updateProfile(
+        age: _ageController.text,
+        height: _heightController.text,
+        weight: _weightController.text,
+        sex: _selectedSex,
+        bloodType: _bloodTypeController.text,
+        medicalConditions: _medicalConditionsController.text,
+        allergies: _allergiesController.text,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving profile: $e')),
+        );
+      }
+    }
     
     if (mounted) {
       // Use the existing scaffold/navigation logic if applicable or just pop/navigate

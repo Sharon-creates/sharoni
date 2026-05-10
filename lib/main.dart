@@ -57,7 +57,7 @@ class MyApp extends ConsumerWidget {
           // Reactively watch profile to decide if setup is needed
           return ref.watch(profileControllerProvider).when(
             data: (profile) {
-              if (profile == null || (profile.age == null && profile.height == null)) {
+              if (profile == null) {
                 return const ProfileSetupPage();
               }
               return const HomeScaffold();

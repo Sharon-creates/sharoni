@@ -284,7 +284,7 @@ class InsightsPage extends ConsumerWidget {
               return PieChartSectionData(
                 color: colors[i % colors.length],
                 value: value,
-                title: '${(value / total * 100).toInt()}%',
+                title: total > 0 ? '${(value / total * 100).toInt()}%' : '0%',
                 radius: 50,
                 titleStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
               );
