@@ -12,9 +12,16 @@ class NotificationService {
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  
+  // For Web/Simulated Alarms
+  GlobalKey<ScaffoldMessengerState>? messengerKey;
 
-  Future<void> init() async {
-    if (kIsWeb) return;
+  Future<void> init({GlobalKey<ScaffoldMessengerState>? key}) async {
+    messengerKey = key;
+    if (kIsWeb) {
+      debugPrint('Initializing Web Notifications...');
+      return;
+    }
 
     // 1. Initialize Timezones
     tz.initializeTimeZones();
@@ -50,11 +57,17 @@ class NotificationService {
   }
 
   Future<void> scheduleMedicationNotifications(Medication med) async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      _showWebToast(
+        'Alarm Set: ${med.name}', 
+        'Reminder scheduled for ${med.scheduledTimes.length} daily doses.'
+      );
+      return;
+    }
 
     for (int i = 0; i < med.scheduledTimes.length; i++) {
       final time = med.scheduledTimes[i];
-      final id = med.id.hashCode + i; // Unique ID for each time slot
+      final id = med.id.hashCode + i;
 
       await _notificationsPlugin.zonedSchedule(
         id: id,
@@ -86,8 +99,6 @@ class NotificationService {
   }
 
   tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
-    if (kIsWeb) return tz.TZDateTime.now(tz.local); // Dummy for web
-
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate = tz.TZDateTime(
       tz.local,
@@ -104,7 +115,10 @@ class NotificationService {
   }
 
   Future<void> showWarning(String title, String body) async {
-    if (kIsWeb) return;
+    if (kIsWeb) {
+      _showWebToast(title, body, isWarning: true);
+      return;
+    }
 
     await _notificationsPlugin.show(
       id: 999,
@@ -122,5 +136,28 @@ class NotificationService {
         iOS: DarwinNotificationDetails(),
       ),
     );
+  }
+
+  void _showWebToast(String title, String body, {bool isWarning = false}) {
+    debugPrint('WEB NOTIFICATION: [$title] - $body');
+    
+    if (messengerKey?.currentState != null) {
+      messengerKey!.currentState!.showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(body, style: const TextStyle(fontSize: 12)),
+            ],
+          ),
+          backgroundColor: isWarning ? Colors.red : const Color(0xFF00BFA6),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
   }
 }

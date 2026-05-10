@@ -12,11 +12,14 @@ import 'package:sharoni/features/auth/presentation/profile_setup_page.dart';
 
 import 'package:sharoni/core/services/notification_service.dart';
 
+final messengerKey = GlobalKey<ScaffoldMessengerState>();
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize Notifications
-  await NotificationService().init();
+  // Initialize Notifications with global key
+  await NotificationService().init(key: messengerKey);
 
   await Supabase.initialize(
     url: 'https://sfvflstzralywaqkjuje.supabase.co',
@@ -46,6 +49,7 @@ class MyApp extends ConsumerWidget {
       builder: DevicePreview.appBuilder,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      scaffoldMessengerKey: messengerKey,
       home: authState.when(
         data: (user) {
           if (user == null) return const LoginPage();

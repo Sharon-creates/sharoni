@@ -7,9 +7,13 @@ create table if not exists public.profiles (
   weight text,
   sex text,
   blood_type text,
+  genotype text,
   medical_conditions text,
   allergies text,
   current_medications text,
+  emergency_contact_name text,
+  emergency_contact_phone text,
+  emergency_contact_relationship text,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -27,6 +31,9 @@ begin
   if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='sex') then
     alter table public.profiles add column sex text;
   end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='genotype') then
+    alter table public.profiles add column genotype text;
+  end if;
   if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='medical_conditions') then
     alter table public.profiles add column medical_conditions text;
   end if;
@@ -35,6 +42,24 @@ begin
   end if;
   if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='current_medications') then
     alter table public.profiles add column current_medications text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='emergency_contact_name') then
+    alter table public.profiles add column emergency_contact_name text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='emergency_contact_phone') then
+    alter table public.profiles add column emergency_contact_phone text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='emergency_contact_relationship') then
+    alter table public.profiles add column emergency_contact_relationship text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='preferred_alert_channel') then
+    alter table public.profiles add column preferred_alert_channel text default 'WhatsApp';
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='facebook_id') then
+    alter table public.profiles add column facebook_id text;
+  end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='instagram_id') then
+    alter table public.profiles add column instagram_id text;
   end if;
 end $$;
 

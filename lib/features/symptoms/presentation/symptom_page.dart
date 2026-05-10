@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sharoni/core/theme.dart';
 import 'package:sharoni/features/symptoms/presentation/symptom_controller.dart';
-import 'package:sharoni/features/symptoms/data/ai_service.dart';
 import 'package:sharoni/core/models/symptom.dart';
 import 'package:sharoni/features/home/presentation/navigation_controller.dart';
 import 'package:intl/intl.dart';
@@ -254,32 +253,55 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
   Widget _buildAnalysisCard() {
     if (_currentSymptom == null) return const SizedBox.shrink();
     
+    final needsClarification = _currentSymptom!.followUpQuestions.isNotEmpty && _currentSymptom!.followUpAnswers.isEmpty;
+    
     return Card(
       elevation: 0,
-      color: AppTheme.primaryColor.withValues(alpha: 0.05),
+      color: needsClarification ? const Color(0xFFFFF7ED) : AppTheme.primaryColor.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+        side: BorderSide(color: needsClarification ? const Color(0xFFFED7AA) : AppTheme.primaryColor.withValues(alpha: 0.1)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.auto_awesome, color: AppTheme.primaryColor),
-                SizedBox(width: 12),
+                Icon(needsClarification ? Icons.pending_actions : Icons.auto_awesome, color: needsClarification ? Colors.orange : AppTheme.primaryColor),
+                const SizedBox(width: 12),
                 Text(
-                  'Health Insights',
+                  needsClarification ? 'Clinical Refinement' : 'Final Health Insights',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 20,
-                    color: AppTheme.primaryColor,
+                    color: needsClarification ? Colors.orange[800] : AppTheme.primaryColor,
                   ),
                 ),
               ],
             ),
+            const SizedBox(height: 20),
+            if (needsClarification)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[100],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info, size: 16, color: Colors.orange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Your report is a bit vague. Please answer the questions below to help the AI refine its analysis.',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 20),
             
             // Symptoms/Tags
@@ -306,23 +328,25 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
               const SizedBox(height: 24),
             ],
 
-            // Possible Causes
-            _buildInsightSection(
-              icon: Icons.help_outline,
-              title: 'Possible Causes',
-              content: _currentSymptom!.possibleCauses ?? 'Unable to determine specific causes.',
-              color: const Color(0xFF6366F1),
-            ),
-            const SizedBox(height: 20),
+            // Possible Causes (Only show if not needing clarification)
+            if (!needsClarification) ...[
+              _buildInsightSection(
+                icon: Icons.help_outline,
+                title: 'Possible Causes',
+                content: _currentSymptom!.possibleCauses ?? 'Unable to determine specific causes.',
+                color: const Color(0xFF6366F1),
+              ),
+              const SizedBox(height: 20),
 
-            // First Aid
-            _buildInsightSection(
-              icon: Icons.medical_services_outlined,
-              title: 'First Aid Opinion',
-              content: _currentSymptom!.firstAid ?? 'Consult a healthcare professional.',
-              color: const Color(0xFFEC4899),
-            ),
-            const SizedBox(height: 20),
+              // First Aid
+              _buildInsightSection(
+                icon: Icons.medical_services_outlined,
+                title: 'First Aid Opinion',
+                content: _currentSymptom!.firstAid ?? 'Consult a healthcare professional.',
+                color: const Color(0xFFEC4899),
+              ),
+              const SizedBox(height: 20),
+            ],
 
             // Summary
             _buildInsightSection(
@@ -445,6 +469,27 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
                 ),
               ),
             ],
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber[100]!),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.amber),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'AI-generated advice. Not a substitute for professional medical evaluation.',
+                      style: TextStyle(fontSize: 11, color: Colors.amber[900], fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -592,6 +637,21 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
                       Text(symptom.followUpLogic!, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
                     ],
                   ],
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'AI-generated clinical logic. Not a replacement for professional medical advice.',
+                          style: TextStyle(fontSize: 10, color: Colors.grey, fontStyle: FontStyle.italic),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

@@ -46,9 +46,16 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
     String? weight,
     String? sex,
     String? bloodType,
+    String? genotype,
     String? medicalConditions,
     String? allergies,
     String? currentMedications,
+    String? emergencyContactName,
+    String? emergencyContactPhone,
+    String? emergencyContactRelationship,
+    String? preferredAlertChannel,
+    String? facebookId,
+    String? instagramId,
   }) async {
     if (_userId == null) return;
     
@@ -61,9 +68,16 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
       weight: weight ?? currentProfile?.weight,
       sex: sex ?? currentProfile?.sex,
       bloodType: bloodType ?? currentProfile?.bloodType,
+      genotype: genotype ?? currentProfile?.genotype,
       medicalConditions: medicalConditions ?? currentProfile?.medicalConditions,
       allergies: allergies ?? currentProfile?.allergies,
       currentMedications: currentMedications ?? currentProfile?.currentMedications,
+      emergencyContactName: emergencyContactName ?? currentProfile?.emergencyContactName,
+      emergencyContactPhone: emergencyContactPhone ?? currentProfile?.emergencyContactPhone,
+      emergencyContactRelationship: emergencyContactRelationship ?? currentProfile?.emergencyContactRelationship,
+      preferredAlertChannel: preferredAlertChannel ?? currentProfile?.preferredAlertChannel,
+      facebookId: facebookId ?? currentProfile?.facebookId,
+      instagramId: instagramId ?? currentProfile?.instagramId,
       updatedAt: DateTime.now(),
     );
 

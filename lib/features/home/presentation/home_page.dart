@@ -75,15 +75,17 @@ class HomePage extends ConsumerWidget {
 
             _buildSectionTitle('Connected Apps'),
             const SizedBox(height: 16),
-            _buildSocialIntegrations(),
+            _buildSocialIntegrations(context),
             const SizedBox(height: 24),
             if (recentSymptoms.isNotEmpty) ...[
               _buildSectionTitle('Recent Activity'),
               const SizedBox(height: 16),
               ...recentSymptoms.map((s) => ListTile(
+                onTap: () => ref.read(navigationControllerProvider.notifier).state = 1,
                 leading: const Icon(Icons.history_edu, color: AppTheme.secondaryColor),
                 title: Text(s.description, maxLines: 1, overflow: TextOverflow.ellipsis),
                 subtitle: Text(_formatDate(s.createdAt)),
+                trailing: const Icon(Icons.chevron_right, size: 16),
               )),
               const SizedBox(height: 24),
             ],
@@ -419,27 +421,31 @@ class HomePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildSocialIntegrations() {
+  Widget _buildSocialIntegrations(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        _buildSocialIcon(Icons.message, 'WhatsApp', const Color(0xFF25D366)),
-        _buildSocialIcon(Icons.camera_alt, 'Instagram', const Color(0xFFE4405F)),
-        _buildSocialIcon(Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
+        _buildSocialIcon(context, Icons.message, 'WhatsApp', const Color(0xFF25D366)),
+        _buildSocialIcon(context, Icons.camera_alt, 'Instagram', const Color(0xFFE4405F)),
+        _buildSocialIcon(context, Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
       ],
     );
   }
 
-  Widget _buildSocialIcon(IconData icon, String label, Color color) {
+  Widget _buildSocialIcon(BuildContext context, IconData icon, String label, Color color) {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
+        InkWell(
+          onTap: () => _showSocialIntegrationDialog(context, label),
+          customBorder: const CircleBorder(),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 28),
           ),
-          child: Icon(icon, color: color, size: 28),
         ),
         const SizedBox(height: 8),
         Text(
@@ -450,6 +456,38 @@ class HomePage extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _showSocialIntegrationDialog(BuildContext context, String platform) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Connect to $platform'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enable $platform notifications to receive medication reminders and emergency alerts.'),
+            const SizedBox(height: 16),
+            TextField(
+              decoration: InputDecoration(
+                labelText: 'Phone Number',
+                hintText: '+1234567890',
+                prefixIcon: const Icon(Icons.phone),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              keyboardType: TextInputType.phone,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Connect'),
+          ),
+        ],
+      ),
     );
   }
 

@@ -235,10 +235,12 @@ class _MedicationPageState extends ConsumerState<MedicationPage> {
           data: (medications) {
             if (medications.isEmpty) return _buildEmptyState();
 
-            // Mocking progress for the UI design replicate (typically calculated from logs)
-            int totalTakes = medications.length;
-            int taken = (totalTakes * 0.75).round(); // 75% mock
-            double progress = totalTakes > 0 ? taken / totalTakes : 0.0;
+            final logs = ref.watch(medicationLogsProvider).value ?? [];
+            
+            // Calculate actual progress from logs
+            final totalDosesToday = medications.where((m) => m.isEnabled).fold<int>(0, (sum, m) => sum + m.scheduledTimes.length);
+            final takenDosesToday = logs.where((l) => l.status == 'taken').length;
+            final progress = totalDosesToday > 0 ? (takenDosesToday / totalDosesToday).clamp(0.0, 1.0) : 0.0;
 
             final morningMeds = medications.where((m) => m.scheduledTimes.any((t) => t.hour < 12)).toList();
             final eveningMeds = medications.where((m) => m.scheduledTimes.any((t) => t.hour >= 12)).toList();
@@ -317,7 +319,7 @@ class _MedicationPageState extends ConsumerState<MedicationPage> {
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '$taken of $totalTakes medications taken',
+                                  '$takenDosesToday of $totalDosesToday medications taken',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.grey[600],
@@ -361,7 +363,13 @@ class _MedicationPageState extends ConsumerState<MedicationPage> {
                   if (morningMeds.isNotEmpty) ...[
                     _buildTimeSectionHeader('Morning', '08:00 AM', Icons.wb_sunny_outlined, const Color(0xFFFFF7E6), const Color(0xFFFFB020)),
                     const SizedBox(height: 16),
-                    ...morningMeds.map((med) => _buildMedicationCard(med, isCompleted: true, baseColor: const Color(0xFFFFEFE9), iconColor: const Color(0xFFFF7A45))),
+                    ...morningMeds.map((med) {
+                      final isCompleted = logs.any((l) => l.medicationId == med.id && l.status == 'taken' && l.scheduledFor.hour < 12);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _buildMedicationCard(context, ref, med, isCompleted: isCompleted, baseColor: isCompleted ? const Color(0xFFE6FAF6) : const Color(0xFFFFEFE9), iconColor: isCompleted ? const Color(0xFF00BFA6) : const Color(0xFFFF7A45)),
+                      );
+                    }),
                     const SizedBox(height: 24),
                   ],
 
@@ -370,9 +378,11 @@ class _MedicationPageState extends ConsumerState<MedicationPage> {
                     _buildTimeSectionHeader('Evening', '08:00 PM', Icons.nightlight_round_outlined, const Color(0xFFF3EDFF), const Color(0xFF9462FF)),
                     const SizedBox(height: 16),
                     ...eveningMeds.map((med) {
-                      // Mock untaken for the last item just for visual variety matching the screenshot
-                      bool isCompleted = med.name != eveningMeds.last.name;
-                      return _buildMedicationCard(med, isCompleted: isCompleted, baseColor: isCompleted ? const Color(0xFFE6FAF6) : const Color(0xFFF3EDFF), iconColor: isCompleted ? const Color(0xFF00BFA6) : const Color(0xFF9462FF));
+                      final isCompleted = logs.any((l) => l.medicationId == med.id && l.status == 'taken' && l.scheduledFor.hour >= 12);
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: _buildMedicationCard(context, ref, med, isCompleted: isCompleted, baseColor: isCompleted ? const Color(0xFFE6FAF6) : const Color(0xFFF3EDFF), iconColor: isCompleted ? const Color(0xFF00BFA6) : const Color(0xFF9462FF)),
+                      );
                     }),
                     const SizedBox(height: 100), // padding for FAB
                   ],
@@ -429,18 +439,33 @@ class _MedicationPageState extends ConsumerState<MedicationPage> {
     );
   }
 
-  Widget _buildMedicationCard(Medication med, {required bool isCompleted, required Color baseColor, required Color iconColor}) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isCompleted ? const Color(0xFFF2FBF9) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isCompleted ? const Color(0xFFA6E5D9) : const Color(0xFFF1F5F9),
-          width: 1.5,
+  Widget _buildMedicationCard(BuildContext context, WidgetRef ref, Medication med, {required bool isCompleted, required Color baseColor, required Color iconColor}) {
+    return InkWell(
+      onTap: () {
+        if (!isCompleted) {
+          final now = DateTime.now();
+          // Find the scheduled time for this period (morning/evening)
+          final hour = med.scheduledTimes.any((t) => t.hour < 12) ? 8 : 20; // Defaulting for simple toggle logic
+          final scheduledFor = DateTime(now.year, now.month, now.day, hour);
+          
+          ref.read(medicationControllerProvider.notifier).logDose(med.id, scheduledFor, 'taken');
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('${med.name} marked as taken')),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isCompleted ? const Color(0xFFF2FBF9) : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isCompleted ? const Color(0xFFA6E5D9) : const Color(0xFFF1F5F9),
+            width: 1.5,
+          ),
         ),
-      ),
       child: Row(
         children: [
           Container(
@@ -488,8 +513,9 @@ class _MedicationPageState extends ConsumerState<MedicationPage> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildEmptyState() {
     return Center(

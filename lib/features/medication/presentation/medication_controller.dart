@@ -6,14 +6,20 @@ import 'package:sharoni/core/models/medication.dart';
 import 'package:sharoni/core/models/medication_log.dart';
 
 import 'package:sharoni/core/services/notification_service.dart';
+import 'package:sharoni/core/services/messaging_service.dart';
+import 'package:sharoni/features/profile/presentation/profile_controller.dart';
+import 'package:sharoni/core/models/profile.dart';
 
 final medicationControllerProvider = StateNotifierProvider<MedicationController, AsyncValue<List<Medication>>>((ref) {
   final user = ref.watch(authControllerProvider).value;
+  final profile = ref.watch(profileControllerProvider).value;
   final userId = user?.id;
   return MedicationController(
     ref.watch(medicationRepositoryProvider), 
     NotificationService(),
+    MessagingService(),
     userId,
+    profile,
   );
 });
 
@@ -26,9 +32,11 @@ final medicationLogsProvider = FutureProvider<List<MedicationLog>>((ref) {
 class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
   final MedicationRepository _repository;
   final NotificationService _notificationService;
+  final MessagingService _messagingService;
   final String? _userId;
+  final Profile? _profile;
 
-  MedicationController(this._repository, this._notificationService, this._userId) : super(const AsyncValue.loading()) {
+  MedicationController(this._repository, this._notificationService, this._messagingService, this._userId, this._profile) : super(const AsyncValue.loading()) {
     if (_userId != null && _userId!.isNotEmpty) {
       loadMedications();
     } else {
@@ -212,6 +220,20 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
         'Consistent Doses Missed', 
         'You have missed $missedCount doses recently. Repeated missed doses can affect treatment. Consider consulting a healthcare professional.'
       );
+
+      // Part 3: Third-Party Integration Logic
+      // If we have an emergency contact, send them a WhatsApp alert
+      if (_profile != null && _profile!.emergencyContactPhone != null && _profile!.emergencyContactPhone!.isNotEmpty) {
+        _messagingService.sendEmergencyAlert(
+          recipientPhone: _profile!.emergencyContactPhone!,
+          patientName: _profile!.username ?? 'Your patient',
+          missedCount: missedCount,
+          lastMedication: meds.first.name,
+          channel: _profile!.preferredAlertChannel ?? 'WhatsApp',
+          facebookId: _profile!.facebookId,
+          instagramId: _profile!.instagramId,
+        );
+      }
     }
   }
 }

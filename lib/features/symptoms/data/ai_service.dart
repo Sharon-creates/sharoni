@@ -2,37 +2,24 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sharoni/core/models/profile.dart';
+import 'package:sharoni/core/models/symptom.dart';
 
 final aiServiceProvider = Provider((ref) => AIService());
-
-class SymptomAnalysis {
-  final List<String> symptoms;
-  final String? possibleCauses;
-  final String? firstAid;
-  final String advice; // General advice/summary
-  final List<String> followUpQuestions;
-
-  SymptomAnalysis({
-    required this.symptoms, 
-    this.possibleCauses, 
-    this.firstAid, 
-    required this.advice,
-    this.followUpQuestions = const [],
-  });
-}
-
 
 class AIService {
   // Normally you would use an environment variable or a secure vault
   final String _apiKey = 'hf_your_api_key_placeholder'; 
-  final String _modelUrl = 'https://api-inference.huggingface.co/models/google/flan-t5-base';
+  // Using BioMistral-7B-Instruct: A state-of-the-art generative LLM fine-tuned on 
+  // medical/clinical text. This provides the "Generative" power needed for 
+  // advice and analysis that ClinicalBERT (encoder-only) lacks.
+  final String _modelUrl = 'https://api-inference.huggingface.co/models/BioMistral/BioMistral-7B-Instruct';
 
   Future<SymptomAnalysis> analyzeSymptoms(String description, [Profile? profile]) async {
     return _analyzeInternal(description, profile: profile);
   }
 
   Future<SymptomAnalysis> refineAnalysis(String originalDescription, List<String> questions, List<String> answers, [Profile? profile]) async {
-    final refinedDescription = "Original: $originalDescription. " + 
+    final refinedDescription = "Patient reported: $originalDescription. " + 
         List.generate(questions.length, (i) => "Q: ${questions[i]} A: ${i < answers.length ? answers[i] : 'N/A'}").join(". ");
     
     return _analyzeInternal(refinedDescription, profile: profile, isRefined: true);
@@ -46,32 +33,24 @@ class AIService {
         if (profile.age != null) contextParts.add("Age: ${profile.age}");
         if (profile.sex != null) contextParts.add("Sex: ${profile.sex}");
         if (profile.medicalConditions != null && profile.medicalConditions!.isNotEmpty) {
-          contextParts.add("Known conditions: ${profile.medicalConditions}");
+          contextParts.add("History: ${profile.medicalConditions}");
         }
-        if (profile.allergies != null && profile.allergies!.isNotEmpty) {
-          contextParts.add("Allergies: ${profile.allergies}");
-        }
+        if (profile.bloodType != null) contextParts.add("Blood Type: ${profile.bloodType}");
+        if (profile.genotype != null) contextParts.add("Genotype: ${profile.genotype}");
         if (contextParts.isNotEmpty) {
-          contextString = "User Background context: (${contextParts.join(', ')}). ";
+          contextString = "Patient Context: [${contextParts.join(', ')}]. ";
         }
       }
 
       final prompt = isRefined 
-          ? "Act as a clinical triage assistant. Perform a multi-step analysis. "
-            "USER DATA INPUT: "
-            "- Primary Symptom: ${_extractPrimarySymptom(description)} "
-            "- Onset (When noticed): ${description.contains('A:') ? _extractAnswer(description, 0) : 'Not provided'} "
-            "- Triggers (Better/Worse): ${description.contains('A:') ? _extractAnswer(description, 1) : 'Not provided'} "
-            "ANALYSIS LOGIC: "
-            "1. CROSS-REFERENCE: Look at how Onset and Triggers change the nature of the Primary Symptom. "
-            "2. TRIAGE CATEGORIZATION: Determine if it indicates Emergency, Urgent Care, or Home Care. "
-            "3. FIRST AID DERIVATION: Suggest immediate comfort measures. "
-            "EXPECTED OUTPUT FORMAT (JSON): "
-            "{ \"possible_causes\": \"...\", \"first_aid_opinion\": \"...\", \"advice\": \"...\", \"follow_up_logic\": \"...\" } "
-            "CONSTRAINTS: Calm clinical tone, safety-first, no definitive diagnosis."
-          : "As a medical assistant, analyze this: '$description'. ${contextString}"
-            "1. Extract symptoms (comma list). 2. Possible causes. 3. First-aid. 4. If brief, 2-3 questions. "
-            "Format: 'Symptoms: [symptoms], Causes: [causes], First Aid: [first_aid], Questions: [q1|q2|q3], Advice: [summary]'.";
+          ? "<s>[INST] You are a BioMistral Clinical Expert. A patient has provided additional details to their previous report: '$description'. ${contextString} "
+            "Based on the ENTIRE context, provide a FINAL reasoning. "
+            "Return ONLY a JSON object with: "
+            "{ \"possible_causes\": \"specific clinical causes based on full data\", \"first_aid_opinion\": \"precautionary and specific triage steps\", \"advice\": \"comprehensive medical summary\", \"follow_up_logic\": \"clinical reasoning path\" } [/INST]</s>"
+          : "<s>[INST] You are BioMistral, a Clinical Assistant. Analyze: '$description'. ${contextString} "
+            "Your priority is to identify missing clinical parameters (Duration, Severity, Character, Location). "
+            "If the report is vague (e.g. 'I have a headache'), DO NOT give a definitive cause. Instead, focus on asking for the missing data. "
+            "Format: Symptoms: [s], Causes: [c], First Aid: [Precautionary guidance], Questions: [q1|q2|q3], Advice: [a] [/INST]</s>";
       
       final response = await http.post(
 
