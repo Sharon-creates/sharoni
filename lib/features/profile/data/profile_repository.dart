@@ -32,4 +32,12 @@ class ProfileRepository {
       }
     }
   }
+
+  Future<void> updatePassword(String newPassword) async {
+    await _supabase.auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  Future<void> resetPassword(String email) async {
+    await _supabase.auth.resetPasswordForEmail(email);
+  }
 }

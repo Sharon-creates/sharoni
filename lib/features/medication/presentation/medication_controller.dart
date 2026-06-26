@@ -4,6 +4,7 @@ import 'package:sharoni/features/auth/presentation/auth_controller.dart';
 import 'package:sharoni/features/medication/data/medication_repository.dart';
 import 'package:sharoni/core/models/medication.dart';
 import 'package:sharoni/core/models/medication_log.dart';
+import 'dart:math';
 
 import 'package:sharoni/core/services/notification_service.dart';
 import 'package:sharoni/core/services/messaging_service.dart';
@@ -20,6 +21,7 @@ final medicationControllerProvider = StateNotifierProvider<MedicationController,
     MessagingService(),
     userId,
     profile,
+    ref,
   );
 });
 
@@ -35,8 +37,9 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
   final MessagingService _messagingService;
   final String? _userId;
   final Profile? _profile;
+  final Ref? _ref;
 
-  MedicationController(this._repository, this._notificationService, this._messagingService, this._userId, this._profile) : super(const AsyncValue.loading()) {
+  MedicationController(this._repository, this._notificationService, this._messagingService, this._userId, this._profile, [this._ref]) : super(const AsyncValue.loading()) {
     if (_userId != null && _userId!.isNotEmpty) {
       loadMedications();
     } else {
@@ -74,6 +77,21 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
     }
   }
 
+  String _generateUUID() {
+    final Random random = Random.secure();
+    final List<int> values = List<int>.generate(16, (i) => random.nextInt(256));
+    values[6] = (values[6] & 0x0f) | 0x40; // version 4
+    values[8] = (values[8] & 0x3f) | 0x80; // variant
+    final StringBuffer buffer = StringBuffer();
+    for (int i = 0; i < 16; i++) {
+      if (i == 4 || i == 6 || i == 8 || i == 10) {
+        buffer.write('-');
+      }
+      buffer.write(values[i].toRadixString(16).padLeft(2, '0'));
+    }
+    return buffer.toString();
+  }
+
   Future<void> addMedication({
     required String name,
     required String dosagePerIntake,
@@ -90,8 +108,9 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
       }
 
       final now = DateTime.now();
+      final medicationId = _generateUUID();
       final newMed = Medication(
-        id: '', 
+        id: medicationId, 
         userId: _userId!,
         name: name,
         dosagePerIntake: dosagePerIntake,
@@ -103,17 +122,17 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
         endDate: calculatedDuration != null ? now.add(Duration(days: calculatedDuration)) : null,
         createdAt: now,
       );
-      await _repository.addMedication(newMed);
+
+      // Execute database write and notification schedule simultaneously
+      await Future.wait([
+        _repository.addMedication(newMed),
+        if (newMed.isEnabled) _notificationService.scheduleMedicationNotifications(newMed),
+      ]);
+
       await loadMedications();
-      
-      // Schedule notifications for the new medication if enabled
-      if (newMed.isEnabled) {
-        _notificationService.scheduleMedicationNotifications(newMed);
-      }
-    } catch (e, st) {
-      if (mounted) {
-        state = AsyncValue.error(e, st);
-      }
+    } catch (e) {
+      debugPrint('Error adding medication: $e');
+      rethrow;
     }
   }
 
@@ -198,24 +217,38 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
     final logs = await _repository.getTodaysLogs(_userId!);
     final now = DateTime.now();
     int missedCount = 0;
+    bool loggedNewIgnored = false;
 
     for (final med in meds.where((m) => m.isEnabled)) {
       for (final time in med.scheduledTimes) {
         final scheduledFor = DateTime(now.year, now.month, now.day, time.hour, time.minute);
         
-        // If dose was scheduled > 1 hour ago
-        if (scheduledFor.isBefore(now.subtract(const Duration(hours: 1)))) {
-          final isLogged = logs.any((l) => 
-            l.medicationId == med.id && 
-            l.scheduledFor.hour == scheduledFor.hour && 
-            l.scheduledFor.minute == scheduledFor.minute
-          );
+        // If dose was scheduled > 1.5 hours (90 minutes) ago
+        if (scheduledFor.isBefore(now.subtract(const Duration(minutes: 90)))) {
+          MedicationLog? existingLog;
+          for (final l in logs) {
+            if (l.medicationId == med.id && 
+                l.scheduledFor.hour == scheduledFor.hour && 
+                l.scheduledFor.minute == scheduledFor.minute) {
+              existingLog = l;
+              break;
+            }
+          }
           
-          if (!isLogged) {
+          if (existingLog == null) {
+            // Automatically log as ignored in the database
+            await logDose(med.id, scheduledFor, 'ignored');
+            missedCount++;
+            loggedNewIgnored = true;
+          } else if (existingLog.status == 'ignored' || existingLog.status == 'skipped' || existingLog.status == 'missed') {
             missedCount++;
           }
         }
       }
+    }
+
+    if (loggedNewIgnored) {
+      _ref?.invalidate(medicationLogsProvider);
     }
 
     if (missedCount >= 3) {
@@ -224,17 +257,13 @@ class MedicationController extends StateNotifier<AsyncValue<List<Medication>>> {
         'You have missed $missedCount doses recently. Repeated missed doses can affect treatment. Consider consulting a healthcare professional.'
       );
 
-      // Part 3: Third-Party Integration Logic
-      // If we have an emergency contact, send them a WhatsApp alert
+      // If we have an emergency contact, send them an alert
       if (_profile != null && _profile!.emergencyContactPhone != null && _profile!.emergencyContactPhone!.isNotEmpty) {
         _messagingService.sendEmergencyAlert(
           recipientPhone: _profile!.emergencyContactPhone!,
           patientName: _profile!.username ?? 'Your patient',
           missedCount: missedCount,
           lastMedication: meds.first.name,
-          channel: _profile!.preferredAlertChannel ?? 'WhatsApp',
-          facebookId: _profile!.facebookId,
-          instagramId: _profile!.instagramId,
         );
       }
     }

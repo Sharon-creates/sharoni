@@ -12,6 +12,7 @@ class Medication {
   final DateTime startDate;
   final DateTime? endDate;
   final bool isEnabled;
+  final bool isArchived;
   final DateTime createdAt;
 
   Medication({
@@ -26,6 +27,7 @@ class Medication {
     required this.startDate,
     this.endDate,
     this.isEnabled = true,
+    this.isArchived = false,
     required this.createdAt,
   });
 
@@ -57,6 +59,7 @@ class Medication {
               ? DateTime.parse(json['end_date']) 
               : (json['end_date'] as DateTime)),
       isEnabled: json['is_enabled'] ?? true,
+      isArchived: json['is_archived'] ?? false,
       createdAt: json['created_at'] is String 
           ? DateTime.parse(json['created_at']) 
           : (json['created_at'] as DateTime),
@@ -80,6 +83,7 @@ class Medication {
       'start_date': startDate.toIso8601String(),
       'end_date': endDate?.toIso8601String(),
       'is_enabled': isEnabled,
+      'is_archived': isArchived,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -94,6 +98,7 @@ class Medication {
     DateTime? startDate,
     DateTime? endDate,
     bool? isEnabled,
+    bool? isArchived,
   }) {
     return Medication(
       id: id,
@@ -107,6 +112,7 @@ class Medication {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       isEnabled: isEnabled ?? this.isEnabled,
+      isArchived: isArchived ?? this.isArchived,
       createdAt: createdAt,
     );
   }

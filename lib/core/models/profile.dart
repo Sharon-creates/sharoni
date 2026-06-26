@@ -13,9 +13,13 @@ class Profile {
   final String? emergencyContactName;
   final String? emergencyContactPhone;
   final String? emergencyContactRelationship;
-  final String? preferredAlertChannel; 
-  final String? facebookId;
-  final String? instagramId;
+  final String? timezone;
+  final String measurementUnit; // 'metric' or 'imperial'
+  final bool notifSound;
+  final bool notifVibrate;
+  final bool criticalAlerts;
+  final bool escalationEnabled;
+  final bool dailyDigestEnabled;
   final DateTime updatedAt;
 
   Profile({
@@ -33,9 +37,13 @@ class Profile {
     this.emergencyContactName,
     this.emergencyContactPhone,
     this.emergencyContactRelationship,
-    this.preferredAlertChannel,
-    this.facebookId,
-    this.instagramId,
+    this.timezone,
+    this.measurementUnit = 'metric',
+    this.notifSound = true,
+    this.notifVibrate = true,
+    this.criticalAlerts = false,
+    this.escalationEnabled = true,
+    this.dailyDigestEnabled = false,
     required this.updatedAt,
   });
 
@@ -55,9 +63,13 @@ class Profile {
       emergencyContactName: json['emergency_contact_name'],
       emergencyContactPhone: json['emergency_contact_phone'],
       emergencyContactRelationship: json['emergency_contact_relationship'],
-      preferredAlertChannel: json['preferred_alert_channel'],
-      facebookId: json['facebook_id'],
-      instagramId: json['instagram_id'],
+      timezone: json['timezone'],
+      measurementUnit: json['measurement_unit'] ?? 'metric',
+      notifSound: json['notif_sound'] ?? true,
+      notifVibrate: json['notif_vibrate'] ?? true,
+      criticalAlerts: json['critical_alerts'] ?? false,
+      escalationEnabled: json['escalation_enabled'] ?? true,
+      dailyDigestEnabled: json['daily_digest_enabled'] ?? false,
       updatedAt: json['updated_at'] != null 
           ? DateTime.parse(json['updated_at']) 
           : DateTime.now(),
@@ -80,9 +92,13 @@ class Profile {
       'emergency_contact_name': emergencyContactName,
       'emergency_contact_phone': emergencyContactPhone,
       'emergency_contact_relationship': emergencyContactRelationship,
-      'preferred_alert_channel': preferredAlertChannel,
-      'facebook_id': facebookId,
-      'instagram_id': instagramId,
+      'timezone': timezone,
+      'measurement_unit': measurementUnit,
+      'notif_sound': notifSound,
+      'notif_vibrate': notifVibrate,
+      'critical_alerts': criticalAlerts,
+      'escalation_enabled': escalationEnabled,
+      'daily_digest_enabled': dailyDigestEnabled,
       'updated_at': updatedAt.toIso8601String(),
     };
   }
@@ -101,9 +117,13 @@ class Profile {
     String? emergencyContactName,
     String? emergencyContactPhone,
     String? emergencyContactRelationship,
-    String? preferredAlertChannel,
-    String? facebookId,
-    String? instagramId,
+    String? timezone,
+    String? measurementUnit,
+    bool? notifSound,
+    bool? notifVibrate,
+    bool? criticalAlerts,
+    bool? escalationEnabled,
+    bool? dailyDigestEnabled,
     DateTime? updatedAt,
   }) {
     return Profile(
@@ -121,9 +141,13 @@ class Profile {
       emergencyContactName: emergencyContactName ?? this.emergencyContactName,
       emergencyContactPhone: emergencyContactPhone ?? this.emergencyContactPhone,
       emergencyContactRelationship: emergencyContactRelationship ?? this.emergencyContactRelationship,
-      preferredAlertChannel: preferredAlertChannel ?? this.preferredAlertChannel,
-      facebookId: facebookId ?? this.facebookId,
-      instagramId: instagramId ?? this.instagramId,
+      timezone: timezone ?? this.timezone,
+      measurementUnit: measurementUnit ?? this.measurementUnit,
+      notifSound: notifSound ?? this.notifSound,
+      notifVibrate: notifVibrate ?? this.notifVibrate,
+      criticalAlerts: criticalAlerts ?? this.criticalAlerts,
+      escalationEnabled: escalationEnabled ?? this.escalationEnabled,
+      dailyDigestEnabled: dailyDigestEnabled ?? this.dailyDigestEnabled,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

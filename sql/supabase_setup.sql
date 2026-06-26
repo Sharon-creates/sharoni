@@ -55,6 +55,9 @@ begin
   if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='preferred_alert_channel') then
     alter table public.profiles add column preferred_alert_channel text default 'WhatsApp';
   end if;
+  if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='timezone') then
+    alter table public.profiles add column timezone text default 'UTC';
+  end if;
   if not exists (select 1 from information_schema.columns where table_name='profiles' and column_name='facebook_id') then
     alter table public.profiles add column facebook_id text;
   end if;
@@ -77,6 +80,7 @@ create table if not exists public.medications (
   start_date timestamp with time zone default now() not null,
   end_date timestamp with time zone,
   is_enabled boolean default true,
+  is_archived boolean default false,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -85,12 +89,20 @@ alter table public.medications
   drop constraint if exists medications_user_id_fkey,
   add constraint medications_user_id_fkey foreign key (user_id) references auth.users(id) on delete cascade;
 
+-- Add missing columns to medications (uses IF NOT EXISTS — safe to re-run)
+alter table public.medications add column if not exists remaining_quantity int;
+alter table public.medications add column if not exists duration_days int;
+alter table public.medications add column if not exists end_date timestamp with time zone;
+alter table public.medications add column if not exists is_enabled boolean default true;
+alter table public.medications add column if not exists is_archived boolean default false;
+
+
 -- 2.1 Create Medication Logs Table
 create table if not exists public.medication_logs (
   id uuid default gen_random_uuid() primary key,
   medication_id uuid references public.medications on delete cascade not null,
   user_id uuid references auth.users on delete cascade not null,
-  status text not null check (status in ('taken', 'missed', 'skipped')),
+  status text not null check (status in ('taken', 'missed', 'skipped', 'ignored', 'pending')),
   scheduled_for timestamp with time zone not null,
   logged_at timestamp with time zone default now() not null
 );
@@ -208,4 +220,37 @@ begin
   delete from auth.users where id = auth.uid();
 end;
 $$;
+
+
+-- 5. Create Drug Dictionary Table
+create table if not exists public.drug_dictionary (
+  id uuid default gen_random_uuid() primary key,
+  drug_name text not null unique,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+-- Enable RLS
+alter table public.drug_dictionary enable row level security;
+
+-- Allow anonymous read access
+drop policy if exists "Allow public read access to drug dictionary" on public.drug_dictionary;
+create policy "Allow public read access to drug dictionary" on public.drug_dictionary
+  for select using (true);
+
+-- Pre-populate some drugs
+insert into public.drug_dictionary (drug_name) values
+  ('Paracetamol'),
+  ('Panadol'),
+  ('Aspirin'),
+  ('Ibuprofen'),
+  ('Amoxicillin'),
+  ('Metformin'),
+  ('Atorvastatin'),
+  ('Lisinopril'),
+  ('Albuterol'),
+  ('Omeprazole'),
+  ('Penicillin'),
+  ('Insulin')
+on conflict (drug_name) do nothing;
+
 

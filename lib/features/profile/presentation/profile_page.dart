@@ -4,8 +4,13 @@ import 'package:sharoni/core/theme.dart';
 import 'package:sharoni/features/auth/presentation/auth_controller.dart';
 import 'package:sharoni/features/profile/presentation/profile_controller.dart';
 import 'package:sharoni/core/models/profile.dart';
-import 'package:sharoni/features/home/presentation/navigation_controller.dart';
 import 'package:sharoni/core/services/notification_service.dart';
+import 'package:sharoni/features/profile/presentation/settings_page.dart';
+import 'package:sharoni/features/insights/presentation/medical_records_page.dart';
+import 'package:sharoni/features/profile/presentation/notification_settings_page.dart';
+import 'package:sharoni/features/profile/presentation/privacy_security_page.dart';
+import 'package:sharoni/features/profile/presentation/help_support_page.dart';
+import 'package:sharoni/features/profile/presentation/health_report_page.dart';
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -24,12 +29,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   final _emergencyNameController = TextEditingController();
   final _emergencyPhoneController = TextEditingController();
   final _emergencyRelationshipController = TextEditingController();
-  final _facebookController = TextEditingController();
-  final _instagramController = TextEditingController();
   String? _selectedSex;
   String? _selectedBloodType;
   String? _selectedGenotype;
-  String? _selectedAlertChannel;
 
   @override
   void dispose() {
@@ -42,8 +44,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     _emergencyNameController.dispose();
     _emergencyPhoneController.dispose();
     _emergencyRelationshipController.dispose();
-    _facebookController.dispose();
-    _instagramController.dispose();
     super.dispose();
   }
 
@@ -57,12 +57,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     _emergencyNameController.text = profile?.emergencyContactName ?? '';
     _emergencyPhoneController.text = profile?.emergencyContactPhone ?? '';
     _emergencyRelationshipController.text = profile?.emergencyContactRelationship ?? '';
-    _facebookController.text = profile?.facebookId ?? '';
-    _instagramController.text = profile?.instagramId ?? '';
     _selectedSex = profile?.sex;
     _selectedBloodType = profile?.bloodType;
     _selectedGenotype = profile?.genotype;
-    _selectedAlertChannel = profile?.preferredAlertChannel ?? 'WhatsApp';
 
     showModalBottomSheet(
       context: context,
@@ -132,9 +129,9 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(child: _buildTextField(_heightController, 'Height (ft)', Icons.height)),
+                    Expanded(child: _buildTextField(_heightController, profile?.measurementUnit == 'metric' ? 'Height (cm)' : 'Height (ft)', Icons.height)),
                     const SizedBox(width: 12),
-                    Expanded(child: _buildTextField(_weightController, 'Weight (kg)', Icons.monitor_weight_outlined)),
+                    Expanded(child: _buildTextField(_weightController, profile?.measurementUnit == 'metric' ? 'Weight (kg)' : 'Weight (lbs)', Icons.monitor_weight_outlined)),
                   ],
                 ),
                 Row(
@@ -189,26 +186,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 const SizedBox(height: 12),
                 _buildTextField(_emergencyRelationshipController, 'Relationship', Icons.family_restroom_outlined),
                 
-                const SizedBox(height: 24),
-                const Text('Social & Notification Preferences', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedAlertChannel,
-                  decoration: InputDecoration(
-                    labelText: 'Preferred Alert Channel',
-                    prefixIcon: const Icon(Icons.notifications_active_outlined, color: AppTheme.primaryColor),
-                    filled: true,
-                    fillColor: Colors.grey[50],
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  ),
-                  items: ['WhatsApp', 'Facebook', 'Instagram', 'SMS'].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-                  onChanged: (val) => setModalState(() => _selectedAlertChannel = val),
-                ),
-                const SizedBox(height: 12),
-                _buildTextField(_facebookController, 'Facebook User ID', Icons.facebook),
-                const SizedBox(height: 12),
-                _buildTextField(_instagramController, 'Instagram Handle', Icons.camera_alt_outlined),
-                
+
                 const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
@@ -228,9 +206,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         emergencyContactName: _emergencyNameController.text,
                         emergencyContactPhone: _emergencyPhoneController.text,
                         emergencyContactRelationship: _emergencyRelationshipController.text,
-                        preferredAlertChannel: _selectedAlertChannel,
-                        facebookId: _facebookController.text,
-                        instagramId: _instagramController.text,
                       );
                       Navigator.pop(context);
                     },
@@ -330,14 +305,14 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         const Text(
                           'Profile',
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: 28,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF1E293B),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Manage your health profile',
+                          'Manage your health identity',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -345,23 +320,35 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         ),
                       ],
                     ),
-                    InkWell(
-                      onTap: () => _showEditProfile(profile),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'Edit',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF475569),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.settings_outlined, size: 26, color: AppTheme.primaryColor),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SettingsPage()),
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 8),
+                        InkWell(
+                          onTap: () => _showEditProfile(profile),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Edit',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -492,11 +479,15 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       Row(
                         children: [
                           Expanded(child: _buildGridItem('Genotype', profile?.genotype ?? 'Not set')),
-                          Expanded(child: _buildGridItem('Height', (profile?.height?.isNotEmpty == true) ? '${profile!.height} ft' : 'Not set')),
+                          Expanded(child: _buildGridItem('Height', (profile?.height?.isNotEmpty == true) 
+                              ? '${profile!.height} ${profile.measurementUnit == 'metric' ? 'cm' : 'ft'}' 
+                              : 'Not set')),
                         ],
                       ),
                       const SizedBox(height: 20),
-                      _buildGridItem('Weight', (profile?.weight?.isNotEmpty == true) ? '${profile!.weight} kg' : 'Not set'),
+                      _buildGridItem('Weight', (profile?.weight?.isNotEmpty == true) 
+                          ? '${profile!.weight} ${profile.measurementUnit == 'metric' ? 'kg' : 'lbs'}' 
+                          : 'Not set'),
                     ],
                   ),
                 ),
@@ -567,6 +558,8 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 const SizedBox(height: 16),
 
+                const SizedBox(height: 16),
+
                 // Settings List Card
                 Container(
                   decoration: BoxDecoration(
@@ -581,27 +574,51 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         iconBgColor: const Color(0xFFEBF0FF),
                         title: 'Account Settings',
                         isFirst: true,
-                        onTap: () => _showEditProfile(profile),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const SettingsPage()),
+                        ),
                       ),
                       _buildSettingItem(
                         icon: Icons.article_outlined,
                         iconColor: const Color(0xFF00BFA6),
                         iconBgColor: const Color(0xFFE6FAF6),
                         title: 'Medical Records',
-                        onTap: () => ref.read(navigationControllerProvider.notifier).state = 1,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const MedicalRecordsPage()),
+                        ),
+                      ),
+                      _buildSettingItem(
+                        icon: Icons.summarize_outlined,
+                        iconColor: const Color(0xFF1A2340),
+                        iconBgColor: const Color(0xFFE8EBF5),
+                        title: "Doctor's Health Report",
+                        subtitle: 'Full report for your doctor or emergency contact',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HealthReportPage()),
+                        ),
                       ),
                       _buildSettingItem(
                         icon: Icons.notifications_none,
                         iconColor: const Color(0xFF9462FF),
                         iconBgColor: const Color(0xFFF3EDFF),
                         title: 'Notifications',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const NotificationSettingsPage()),
+                        ),
                       ),
                       _buildSettingItem(
                         icon: Icons.shield_outlined,
                         iconColor: const Color(0xFFFFB020),
                         iconBgColor: const Color(0xFFFFF7E6),
                         title: 'Privacy & Security',
-                        onTap: () => _showDeleteAccountConfirmation(),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const PrivacySecurityPage()),
+                        ),
                       ),
                       _buildSettingItem(
                         icon: Icons.notifications_active_outlined,
@@ -616,6 +633,10 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         iconBgColor: const Color(0xFFFFEAEE),
                         title: 'Help & Support',
                         isLast: true,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HelpSupportPage()),
+                        ),
                       ),
                     ],
                   ),
@@ -755,6 +776,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
     required Color iconColor,
     required Color iconBgColor,
     required String title,
+    String? subtitle,
     VoidCallback? onTap,
     bool isFirst = false,
     bool isLast = false,
@@ -783,13 +805,28 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF1E293B),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF1E293B),
+                        ),
+                      ),
+                      if (subtitle != null) ...[  
+                        const SizedBox(height: 2),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 const Icon(
@@ -809,5 +846,5 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
       ],
     );
   }
-}
 
+}

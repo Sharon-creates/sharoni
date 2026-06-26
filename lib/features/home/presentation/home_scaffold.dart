@@ -7,10 +7,16 @@ import 'package:sharoni/features/symptoms/presentation/symptom_page.dart';
 import 'package:sharoni/features/medication/presentation/medication_page.dart';
 import 'package:sharoni/features/insights/presentation/insights_page.dart';
 import 'package:sharoni/features/profile/presentation/profile_page.dart';
+import 'package:sharoni/core/services/notification_service.dart';
 
-class HomeScaffold extends ConsumerWidget {
+class HomeScaffold extends ConsumerStatefulWidget {
   const HomeScaffold({super.key});
 
+  @override
+  ConsumerState<HomeScaffold> createState() => _HomeScaffoldState();
+}
+
+class _HomeScaffoldState extends ConsumerState<HomeScaffold> {
   final List<Widget> _pages = const [
     HomePage(),
     SymptomPage(),
@@ -20,7 +26,14 @@ class HomeScaffold extends ConsumerWidget {
   ];
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    // Request notification permissions after app load
+    NotificationService().requestNotificationPermissions();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final selectedIndex = ref.watch(navigationControllerProvider);
 
     return Scaffold(

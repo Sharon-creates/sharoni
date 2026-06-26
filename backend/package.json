@@ -1,0 +1,17 @@
+{
+  "name": "sharoni-backend",
+  "version": "1.0.0",
+  "description": "ClinicalBERT Middleman Backend Service",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.19.2",
+    "groq-sdk": "^1.3.0"
+  }
+}

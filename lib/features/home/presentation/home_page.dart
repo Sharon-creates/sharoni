@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sharoni/core/theme.dart';
@@ -39,10 +40,6 @@ class HomePage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Medicare'),
-        leading: IconButton(
-          icon: const Icon(Icons.home),
-          onPressed: () => ref.read(navigationControllerProvider.notifier).state = 0,
-        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -73,19 +70,46 @@ class HomePage extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
 
-            _buildSectionTitle('Connected Apps'),
-            const SizedBox(height: 16),
-            _buildSocialIntegrations(context),
-            const SizedBox(height: 24),
+
             if (recentSymptoms.isNotEmpty) ...[
               _buildSectionTitle('Recent Activity'),
               const SizedBox(height: 16),
-              ...recentSymptoms.map((s) => ListTile(
-                onTap: () => ref.read(navigationControllerProvider.notifier).state = 1,
-                leading: const Icon(Icons.history_edu, color: AppTheme.secondaryColor),
-                title: Text(s.description, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(_formatDate(s.createdAt)),
-                trailing: const Icon(Icons.chevron_right, size: 16),
+              ...recentSymptoms.map((s) => Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: ListTile(
+                  onTap: () => ref.read(navigationControllerProvider.notifier).state = 1,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.secondaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.history_edu, color: AppTheme.secondaryColor, size: 24),
+                  ),
+                  title: Text(
+                    s.description, 
+                    maxLines: 1, 
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(_formatDate(s.createdAt), style: TextStyle(color: AppTheme.textSecondary.withValues(alpha: 0.8), fontSize: 13)),
+                  ),
+                  trailing: Icon(Icons.chevron_right, size: 20, color: AppTheme.textSecondary.withValues(alpha: 0.5)),
+                ),
               )),
               const SizedBox(height: 24),
             ],
@@ -172,43 +196,99 @@ class HomePage extends ConsumerWidget {
           final time = dose['time'] as TimeOfDay;
           final scheduledFor = dose['scheduledFor'] as DateTime;
           
-          final isTaken = logs.any((l) => 
-            l.medicationId == med.id && 
-            l.status == 'taken' &&
-            l.scheduledFor.hour == scheduledFor.hour && 
-            l.scheduledFor.minute == scheduledFor.minute
-          );
+          // Find matching log for this specific time slot
+          MedicationLog? log;
+          for (final l in logs) {
+            if (l.medicationId == med.id &&
+                l.scheduledFor.hour == scheduledFor.hour &&
+                l.scheduledFor.minute == scheduledFor.minute) {
+              log = l;
+              break;
+            }
+          }
+          
+          final String status = log?.status.toLowerCase() ?? 'pending';
+          final bool isTaken = status == 'taken';
+          final bool isSkipped = status == 'skipped';
+          final bool isIgnored = status == 'ignored' || status == 'missed';
+
+          IconData leadingIcon = Icons.radio_button_unchecked;
+          Color leadingColor = Colors.grey[400]!;
+          if (isTaken) {
+            leadingIcon = Icons.check_circle;
+            leadingColor = AppTheme.primaryColor;
+          } else if (isSkipped) {
+            leadingIcon = Icons.next_plan;
+            leadingColor = Colors.orange;
+          } else if (isIgnored) {
+            leadingIcon = Icons.error;
+            leadingColor = Colors.red;
+          }
 
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: ListTile(
-              leading: Icon(
-                isTaken ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: isTaken ? AppTheme.primaryColor : Colors.grey[400],
+              leading: Icon(leadingIcon, color: leadingColor),
+              title: Text(
+                med.name, 
+                style: TextStyle(
+                  decoration: isTaken ? TextDecoration.lineThrough : null,
+                  fontWeight: FontWeight.bold,
+                  color: isTaken ? Colors.grey : AppTheme.accentColor,
+                ),
               ),
-              title: Text(med.name, style: TextStyle(
-                decoration: isTaken ? TextDecoration.lineThrough : null,
-                fontWeight: FontWeight.bold,
-                color: isTaken ? Colors.grey : AppTheme.accentColor,
-              )),
               subtitle: Text('${time.format(context)} • ${med.dosagePerIntake}'),
-              trailing: isTaken 
-                ? const Text('Taken', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold))
-                : TextButton(
-                    onPressed: () {
-                      ref.read(medicationControllerProvider.notifier).logDose(med.id, scheduledFor, 'taken');
-                      ref.invalidate(medicationLogsProvider);
-                    },
-                    child: const Text('Mark Taken'),
-                  ),
+              trailing: isTaken
+                  ? const Text('Taken', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold))
+                  : isSkipped
+                      ? const Text('Skipped', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold))
+                      : isIgnored
+                          ? const Text('Ignored', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+                          : Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: () {
+                                    ref.read(medicationControllerProvider.notifier).logDose(med.id, scheduledFor, 'taken');
+                                    ref.invalidate(medicationLogsProvider);
+                                  },
+                                  child: const Text('Take'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    ref.read(medicationControllerProvider.notifier).logDose(med.id, scheduledFor, 'skipped');
+                                    ref.invalidate(medicationLogsProvider);
+                                  },
+                                  child: const Text('Skip', style: TextStyle(color: Colors.orange)),
+                                ),
+                              ],
+                            ),
             ),
           );
         }),
         if (upcomingDoses.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: Text('No doses scheduled for today', style: TextStyle(color: Colors.grey)),
+          CustomPaint(
+            painter: DashedRectPainter(
+              color: AppTheme.textSecondary.withValues(alpha: 0.3),
+              strokeWidth: 1.5,
+              gap: 6,
+              dashWidth: 6,
+              radius: 16,
+            ),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryColor.withValues(alpha: 0.02),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.event_busy, color: AppTheme.textSecondary.withValues(alpha: 0.7), size: 36),
+                  const SizedBox(height: 12),
+                  const Text('No doses scheduled for today', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w500)),
+                ],
+              ),
             ),
           ),
       ],
@@ -346,42 +426,77 @@ class HomePage extends ConsumerWidget {
   Widget _buildWelcomeCard(BuildContext context, String name) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [AppTheme.primaryColor, Color(0xFF4AC4A8)],
+          colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6), Color(0xFF4AC4A8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryColor.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Hello, $name!',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -50,
+              top: -50,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'How are you feeling today? Track your symptoms or check your reminders.',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 16,
+            Positioned(
+              left: -30,
+              bottom: -30,
+              child: Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white.withValues(alpha: 0.1),
+                ),
+              ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hello, $name!',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'How are you feeling today? Track your symptoms or check your reminders.',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      fontSize: 15,
+                      height: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -415,78 +530,9 @@ class HomePage extends ConsumerWidget {
       title,
       style: const TextStyle(
         fontSize: 18,
-        fontWeight: FontWeight.bold,
+        fontWeight: FontWeight.w800,
         color: AppTheme.accentColor,
-      ),
-    );
-  }
-
-  Widget _buildSocialIntegrations(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        _buildSocialIcon(context, Icons.message, 'WhatsApp', const Color(0xFF25D366)),
-        _buildSocialIcon(context, Icons.camera_alt, 'Instagram', const Color(0xFFE4405F)),
-        _buildSocialIcon(context, Icons.facebook, 'Facebook', const Color(0xFF1877F2)),
-      ],
-    );
-  }
-
-  Widget _buildSocialIcon(BuildContext context, IconData icon, String label, Color color) {
-    return Column(
-      children: [
-        InkWell(
-          onTap: () => _showSocialIntegrationDialog(context, label),
-          customBorder: const CircleBorder(),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 28),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: AppTheme.accentColor.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showSocialIntegrationDialog(BuildContext context, String platform) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Connect to $platform'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Enable $platform notifications to receive medication reminders and emergency alerts.'),
-            const SizedBox(height: 16),
-            TextField(
-              decoration: InputDecoration(
-                labelText: 'Phone Number',
-                hintText: '+1234567890',
-                prefixIcon: const Icon(Icons.phone),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              keyboardType: TextInputType.phone,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Connect'),
-          ),
-        ],
+        letterSpacing: -0.3,
       ),
     );
   }
@@ -557,4 +603,51 @@ class HomePage extends ConsumerWidget {
       ),
     );
   }
+}
+
+class DashedRectPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+  final double gap;
+  final double dashWidth;
+  final double radius;
+
+  DashedRectPainter({
+    this.color = Colors.grey, 
+    this.strokeWidth = 1.0, 
+    this.gap = 5.0,
+    this.dashWidth = 5.0,
+    this.radius = 16.0,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+
+    final Path path = Path();
+    final RRect rrect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(0, 0, size.width, size.height),
+      Radius.circular(radius),
+    );
+    path.addRRect(rrect);
+
+    Path dashPath = Path();
+    for (PathMetric pathMetric in path.computeMetrics()) {
+      double distance = 0.0;
+      while (distance < pathMetric.length) {
+        dashPath.addPath(
+          pathMetric.extractPath(distance, distance + dashWidth),
+          Offset.zero,
+        );
+        distance += dashWidth + gap;
+      }
+    }
+    canvas.drawPath(dashPath, paint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }

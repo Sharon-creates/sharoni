@@ -26,7 +26,20 @@ class AppTheme {
         onSurface: textPrimary,
       ),
       scaffoldBackgroundColor: backgroundColor,
-      textTheme: GoogleFonts.outfitTextTheme().apply(
+      textTheme: TextTheme(
+        displayLarge: GoogleFonts.inter(fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1),
+        displayMedium: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+        displaySmall: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.w700),
+        headlineLarge: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700),
+        headlineMedium: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+        titleLarge: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700),
+        titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w400),
+        bodyMedium: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w400),
+        labelLarge: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+        bodySmall: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w400),
+        labelSmall: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w500),
+      ).apply(
         bodyColor: textPrimary,
         displayColor: textPrimary,
       ),
@@ -34,7 +47,7 @@ class AppTheme {
         backgroundColor: backgroundColor,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.outfit(
+        titleTextStyle: GoogleFonts.inter(
           color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
@@ -51,7 +64,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          textStyle: GoogleFonts.outfit(
+          textStyle: GoogleFonts.inter(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -72,8 +85,8 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: primaryColor, width: 2),
         ),
-        labelStyle: GoogleFonts.outfit(color: textSecondary),
-        floatingLabelStyle: GoogleFonts.outfit(color: primaryColor),
+        labelStyle: GoogleFonts.inter(color: textSecondary),
+        floatingLabelStyle: GoogleFonts.inter(color: primaryColor),
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       ),
       cardTheme: CardThemeData(

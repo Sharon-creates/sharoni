@@ -15,11 +15,63 @@ class SymptomPage extends ConsumerStatefulWidget {
 
 class _SymptomPageState extends ConsumerState<SymptomPage> {
   final _controller = TextEditingController();
+  final _tagsController = TextEditingController();
   final _scrollController = ScrollController();
   bool _isAnalyzing = false;
   Symptom? _currentSymptom;
   final List<TextEditingController> _answerControllers = [];
   int? _expandedIndex;
+
+  Map<String, dynamic> _getTriageInfo(Symptom symptom) {
+    final description = symptom.description.toLowerCase();
+    final advice = (symptom.analysisResult ?? '').toLowerCase();
+    final firstAid = (symptom.firstAid ?? '').toLowerCase();
+
+    // Red: Emergency
+    if (description.contains('chest') ||
+        description.contains('breathing') ||
+        description.contains('heart') ||
+        advice.contains('emergency') ||
+        firstAid.contains('emergency')) {
+      return {
+        'label': 'Emergency',
+        'color': Colors.red,
+        'backgroundColor': const Color(0xFFFEF2F2),
+        'borderColor': const Color(0xFFFCA5A5),
+        'textColor': const Color(0xFF991B1B),
+        'icon': Icons.gpp_bad,
+      };
+    }
+
+    // Yellow/Orange: Observation
+    if (description.contains('severe') ||
+        description.contains('sharp') ||
+        description.contains('high') ||
+        description.contains('intense') ||
+        advice.contains('urgent') ||
+        firstAid.contains('urgent') ||
+        advice.contains('observation') ||
+        firstAid.contains('observation')) {
+      return {
+        'label': 'Observation',
+        'color': Colors.orange,
+        'backgroundColor': const Color(0xFFFFF7ED),
+        'borderColor': const Color(0xFFFED7AA),
+        'textColor': const Color(0xFF9A3412),
+        'icon': Icons.warning_amber_rounded,
+      };
+    }
+
+    // Green: Home Care
+    return {
+      'label': 'Home Care',
+      'color': Colors.green,
+      'backgroundColor': const Color(0xFFF0FDF4),
+      'borderColor': const Color(0xFFBBF7D0),
+      'textColor': const Color(0xFF166534),
+      'icon': Icons.check_circle_outline,
+    };
+  }
 
   @override
   void dispose() {
@@ -40,7 +92,8 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
     });
 
     try {
-      final symptom = await ref.read(symptomControllerProvider.notifier).analyzeAndSaveSymptom(_controller.text);
+      final manualTags = _tagsController.text.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      final symptom = await ref.read(symptomControllerProvider.notifier).analyzeAndSaveSymptom(_controller.text, manualTags: manualTags);
       
       if (mounted) {
         setState(() {
@@ -54,6 +107,7 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
       }
       
       _controller.clear();
+      _tagsController.clear();
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -69,10 +123,17 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
   void _submitAnswers() async {
     if (_currentSymptom == null) return;
     
-    final answers = _answerControllers.map((c) => c.text).toList();
-    if (answers.every((a) => a.isEmpty)) {
+    final answers = List<String>.generate(
+      _currentSymptom!.followUpQuestions.length,
+      (i) => i < _currentSymptom!.followUpAnswers.length
+          ? _currentSymptom!.followUpAnswers[i]
+          : _answerControllers[i].text,
+    );
+
+    final newAnswers = answers.sublist(_currentSymptom!.followUpAnswers.length);
+    if (newAnswers.every((a) => a.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please answer at least one question.')),
+        const SnackBar(content: Text('Please answer the question.')),
       );
       return;
     }
@@ -93,7 +154,10 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
         setState(() {
           _isAnalyzing = false;
           _currentSymptom = updatedSymptom;
-          // Clear answers after submission if you want, or keep them
+          _answerControllers.clear();
+          for (var i = 0; i < (updatedSymptom.followUpQuestions.length); i++) {
+            _answerControllers.add(TextEditingController());
+          }
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Analysis refined with your answers.')),
@@ -143,13 +207,15 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
                     _buildAnalysisCard(),
                     const SizedBox(height: 32),
                   ],
-                  const Align(
+                  _buildTagFilter(symptomsAsync.value ?? []),
+                  const SizedBox(height: 16),
+                  Align(
                     alignment: Alignment.centerLeft,
                     child: Padding(
-                      padding: EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.only(left: 4),
                       child: Text(
                         'Recent History',
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        style: Theme.of(context).textTheme.headlineMedium,
                       ),
                     ),
                   ),
@@ -220,6 +286,22 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _tagsController,
+              decoration: InputDecoration(
+                hintText: 'e.g., Work Stress, After Coffee, Post-Workout',
+                labelText: 'Add manual tags (optional, comma separated)',
+                prefixIcon: const Icon(Icons.label_outline, size: 20),
+                filled: true,
+                fillColor: Colors.grey[50],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              style: const TextStyle(fontSize: 13),
+            ),
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -253,14 +335,20 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
   Widget _buildAnalysisCard() {
     if (_currentSymptom == null) return const SizedBox.shrink();
     
-    final needsClarification = _currentSymptom!.followUpQuestions.isNotEmpty && _currentSymptom!.followUpAnswers.isEmpty;
+    final needsClarification = _currentSymptom!.followUpQuestions.length > _currentSymptom!.followUpAnswers.length;
+    final triage = _getTriageInfo(_currentSymptom!);
+    
+    final cardColor = needsClarification ? const Color(0xFFFFF7ED) : triage['backgroundColor'] as Color;
+    final borderColor = needsClarification ? const Color(0xFFFED7AA) : triage['borderColor'] as Color;
+    final titleColor = needsClarification ? Colors.orange[800]! : triage['textColor'] as Color;
+    final titleIcon = needsClarification ? Icons.pending_actions : triage['icon'] as IconData;
     
     return Card(
       elevation: 0,
-      color: needsClarification ? const Color(0xFFFFF7ED) : AppTheme.primaryColor.withValues(alpha: 0.05),
+      color: cardColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: needsClarification ? const Color(0xFFFED7AA) : AppTheme.primaryColor.withValues(alpha: 0.1)),
+        side: BorderSide(color: borderColor),
       ),
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -269,14 +357,15 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
           children: [
             Row(
               children: [
-                Icon(needsClarification ? Icons.pending_actions : Icons.auto_awesome, color: needsClarification ? Colors.orange : AppTheme.primaryColor),
+                Icon(titleIcon, color: titleColor),
                 const SizedBox(width: 12),
-                Text(
-                  needsClarification ? 'Clinical Refinement' : 'Final Health Insights',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                    color: needsClarification ? Colors.orange[800] : AppTheme.primaryColor,
+                Expanded(
+                  child: Text(
+                    needsClarification ? 'Clinical Refinement' : 'Final Health Insights (${triage['label']})',
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: titleColor,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -445,7 +534,7 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
                     }),
                     
                     // Show submit button only if there are unanswered questions
-                    if (_currentSymptom!.followUpAnswers.isEmpty) ...[
+                    if (needsClarification) ...[
                       const SizedBox(height: 8),
                       SizedBox(
                         width: double.infinity,
@@ -533,12 +622,17 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
 
   Widget _buildSymptomCard(Symptom symptom, int index) {
     final isExpanded = index == _expandedIndex;
+    final triage = _getTriageInfo(symptom);
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: isExpanded ? AppTheme.primaryColor.withValues(alpha: 0.3) : Colors.grey[200]!),
+        side: BorderSide(
+          color: isExpanded ? (triage['color'] as Color) : Colors.grey[200]!,
+          width: isExpanded ? 1.5 : 1.0,
+        ),
       ),
       child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
@@ -556,9 +650,37 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
               color: isExpanded ? AppTheme.primaryColor : AppTheme.accentColor,
             ),
           ),
-          subtitle: Text(
-            DateFormat('MMMM dd • HH:mm').format(symptom.createdAt),
-            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+          subtitle: Row(
+            children: [
+              Text(
+                DateFormat('MMMM dd • HH:mm').format(symptom.createdAt),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: triage['backgroundColor'] as Color,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: triage['borderColor'] as Color, width: 0.5),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(triage['icon'] as IconData, size: 10, color: triage['textColor'] as Color),
+                    const SizedBox(width: 4),
+                    Text(
+                      triage['label'] as String,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: triage['textColor'] as Color,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           trailing: isExpanded 
             ? IconButton(
@@ -578,15 +700,20 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: symptom.tags.map<Widget>((tag) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              tag,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                      children: symptom.tags.map<Widget>((tag) => InkWell(
+                            onTap: () => ref.read(symptomControllerProvider.notifier).filterByTag(tag),
+                            borderRadius: BorderRadius.circular(8),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.1)),
+                              ),
+                              child: Text(
+                                tag,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryColor),
+                              ),
                             ),
                           )).toList(),
                     ),
@@ -681,7 +808,61 @@ class _SymptomPageState extends ConsumerState<SymptomPage> {
     );
   }
 
+  Widget _buildTagFilter(List<Symptom> allSymptoms) {
+    // Extract unique tags from all symptoms
+    final allTags = allSymptoms.expand((s) => s.tags).toSet().toList();
+    if (allTags.isEmpty) return const SizedBox.shrink();
+
+    final selectedTag = ref.read(symptomControllerProvider.notifier).selectedTag;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.only(left: 4, bottom: 12),
+          child: Text('Filter by Symptom', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
+        ),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: const Text('All'),
+                  selected: selectedTag == null,
+                  onSelected: (_) => ref.read(symptomControllerProvider.notifier).filterByTag(null),
+                  backgroundColor: Colors.white,
+                  selectedColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  labelStyle: TextStyle(
+                    color: selectedTag == null ? AppTheme.primaryColor : Colors.grey[700],
+                    fontWeight: selectedTag == null ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+              ...allTags.map((tag) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text(tag),
+                  selected: selectedTag == tag,
+                  onSelected: (_) => ref.read(symptomControllerProvider.notifier).filterByTag(tag),
+                  backgroundColor: Colors.white,
+                  selectedColor: AppTheme.primaryColor.withValues(alpha: 0.1),
+                  labelStyle: TextStyle(
+                    color: selectedTag == tag ? AppTheme.primaryColor : Colors.grey[700],
+                    fontWeight: selectedTag == tag ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              )),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyState() {
+// ... existing empty state ...
     return Center(
       child: Column(
         children: [

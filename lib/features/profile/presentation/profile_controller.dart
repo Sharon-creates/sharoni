@@ -2,18 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sharoni/features/auth/presentation/auth_controller.dart';
 import 'package:sharoni/features/profile/data/profile_repository.dart';
 import 'package:sharoni/core/models/profile.dart';
+import 'package:sharoni/features/symptoms/presentation/symptom_controller.dart';
+import 'package:sharoni/features/medication/presentation/medication_controller.dart';
 
 final profileControllerProvider = StateNotifierProvider<ProfileController, AsyncValue<Profile?>>((ref) {
   final user = ref.watch(authControllerProvider).value;
   final userId = user?.id;
-  return ProfileController(ref.watch(profileRepositoryProvider), userId);
+  return ProfileController(ref.watch(profileRepositoryProvider), userId, ref);
 });
 
 class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
   final ProfileRepository _repository;
   final String? _userId;
+  final Ref _ref;
 
-  ProfileController(this._repository, this._userId) : super(const AsyncValue.loading()) {
+  ProfileController(this._repository, this._userId, this._ref) : super(const AsyncValue.loading()) {
     if (_userId != null && _userId!.isNotEmpty) {
       loadProfile();
     } else {
@@ -53,9 +56,12 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
     String? emergencyContactName,
     String? emergencyContactPhone,
     String? emergencyContactRelationship,
-    String? preferredAlertChannel,
-    String? facebookId,
-    String? instagramId,
+    String? measurementUnit,
+    bool? notifSound,
+    bool? notifVibrate,
+    bool? criticalAlerts,
+    bool? escalationEnabled,
+    bool? dailyDigestEnabled,
   }) async {
     if (_userId == null) return;
     
@@ -75,9 +81,12 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
       emergencyContactName: emergencyContactName ?? currentProfile?.emergencyContactName,
       emergencyContactPhone: emergencyContactPhone ?? currentProfile?.emergencyContactPhone,
       emergencyContactRelationship: emergencyContactRelationship ?? currentProfile?.emergencyContactRelationship,
-      preferredAlertChannel: preferredAlertChannel ?? currentProfile?.preferredAlertChannel,
-      facebookId: facebookId ?? currentProfile?.facebookId,
-      instagramId: instagramId ?? currentProfile?.instagramId,
+      measurementUnit: measurementUnit ?? currentProfile?.measurementUnit ?? 'metric',
+      notifSound: notifSound ?? currentProfile?.notifSound ?? true,
+      notifVibrate: notifVibrate ?? currentProfile?.notifVibrate ?? true,
+      criticalAlerts: criticalAlerts ?? currentProfile?.criticalAlerts ?? false,
+      escalationEnabled: escalationEnabled ?? currentProfile?.escalationEnabled ?? true,
+      dailyDigestEnabled: dailyDigestEnabled ?? currentProfile?.dailyDigestEnabled ?? false,
       updatedAt: DateTime.now(),
     );
 
@@ -91,5 +100,29 @@ class ProfileController extends StateNotifier<AsyncValue<Profile?>> {
         state = AsyncValue.error(e, st);
       }
     }
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    // Supabase Auth handles password updates
+    await _repository.updatePassword(newPassword);
+  }
+
+  Future<void> resetPassword(String email) async {
+    await _repository.resetPassword(email);
+  }
+
+  Future<Map<String, dynamic>> exportAllData() async {
+    if (_userId == null) throw Exception('User not authenticated');
+    
+    final profile = state.value;
+    final symptoms = _ref.read(symptomControllerProvider).value ?? [];
+    final medications = _ref.read(medicationControllerProvider).value ?? [];
+
+    return {
+      'exported_at': DateTime.now().toIso8601String(),
+      'profile': profile?.toJson(),
+      'symptoms': symptoms.map((s) => s.toJson()).toList(),
+      'medications': medications.map((m) => m.toJson()).toList(),
+    };
   }
 }

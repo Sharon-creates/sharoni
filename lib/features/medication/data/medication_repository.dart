@@ -36,6 +36,38 @@ class MedicationRepository {
     await _supabase.from('medications').delete().eq('id', id);
   }
 
+  Future<List<String>> searchDrugs(String query) async {
+    if (query.isEmpty) return [];
+    try {
+      final response = await _supabase
+          .from('drug_dictionary')
+          .select('drug_name')
+          .ilike('drug_name', '$query%')
+          .limit(10);
+      
+      return (response as List).map((row) => row['drug_name'] as String).toList();
+    } catch (e) {
+      debugPrint('Error searching drug dictionary, using fallback: $e');
+      final fallbacks = [
+        'Paracetamol',
+        'Panadol',
+        'Aspirin',
+        'Ibuprofen',
+        'Amoxicillin',
+        'Metformin',
+        'Atorvastatin',
+        'Lisinopril',
+        'Albuterol',
+        'Omeprazole',
+        'Penicillin',
+        'Insulin'
+      ];
+      return fallbacks
+          .where((d) => d.toLowerCase().startsWith(query.toLowerCase()))
+          .toList();
+    }
+  }
+
   Future<void> toggleMedication(String id, bool isEnabled) async {
     await _supabase
         .from('medications')
@@ -69,3 +101,4 @@ class MedicationRepository {
     }
   }
 }
+

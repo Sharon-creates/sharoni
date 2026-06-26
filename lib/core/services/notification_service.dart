@@ -4,6 +4,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:sharoni/core/models/medication.dart';
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class NotificationService {
@@ -16,6 +17,20 @@ class NotificationService {
   // For Web/Simulated Alarms
   GlobalKey<ScaffoldMessengerState>? messengerKey;
 
+  Future<void> requestNotificationPermissions() async {
+    if (kIsWeb) return;
+
+    // Standard notification permission (Android 13+)
+    if (await Permission.notification.isDenied) {
+      await Permission.notification.request();
+    }
+
+    // Exact alarm permission (Android 12+)
+    if (await Permission.scheduleExactAlarm.isDenied) {
+      await Permission.scheduleExactAlarm.request();
+    }
+  }
+
   Future<void> init({GlobalKey<ScaffoldMessengerState>? key}) async {
     messengerKey = key;
     if (kIsWeb) {
@@ -26,10 +41,12 @@ class NotificationService {
     // 1. Initialize Timezones
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = (await FlutterTimezone.getLocalTimezone()).toString();
-      tz.setLocalLocation(tz.getLocation(timeZoneName));
+      final String currentTimeZone = (await FlutterTimezone.getLocalTimezone()).toString();
+      tz.setLocalLocation(tz.getLocation(currentTimeZone));
     } catch (e) {
-      debugPrint('Error initializing timezone: $e');
+      // Don't silently continue — log it so you actually see the failure
+      debugPrint('Timezone detection failed: $e — defaulting to device offset');
+      tz.setLocalLocation(tz.local);
     }
 
     // 2. Android Settings
@@ -69,6 +86,7 @@ class NotificationService {
       final time = med.scheduledTimes[i];
       final id = med.id.hashCode + i;
 
+      debugPrint('Scheduling notification for med ${med.name} at $time, id=${med.id.hashCode + i}');
       await _notificationsPlugin.zonedSchedule(
         id: id,
         title: 'Medication Reminder: ${med.name}',
@@ -81,12 +99,17 @@ class NotificationService {
             channelDescription: 'Notifications for scheduled medication doses',
             importance: Importance.max,
             priority: Priority.high,
+            sound: RawResourceAndroidNotificationSound('medication_alert'),
+            playSound: true,
           ),
-          iOS: DarwinNotificationDetails(),
+          iOS: DarwinNotificationDetails(
+            sound: 'medication_alert.mp3',
+          ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
       );
+      debugPrint('Scheduled successfully');
     }
   }
 
@@ -132,8 +155,12 @@ class NotificationService {
           importance: Importance.max,
           priority: Priority.high,
           color: Colors.red,
+          sound: RawResourceAndroidNotificationSound('medication_alert'),
+          playSound: true,
         ),
-        iOS: DarwinNotificationDetails(),
+        iOS: DarwinNotificationDetails(
+          sound: 'medication_alert.mp3',
+        ),
       ),
     );
   }

@@ -14,11 +14,21 @@ class AuthController extends StateNotifier<AsyncValue<User?>> {
   }
 
   void _init() {
-    final currentUser = _repository.currentUser;
-    state = AsyncValue.data(currentUser);
-
+    // Start as loading while we wait for the auth state to be confirmed.
+    // Do NOT pre-set from currentUser — the listener below will handle it
+    // on the very first event (initialSession), which Supabase always fires.
     _repository.authStateChanges.listen((data) {
-      state = AsyncValue.data(data.session?.user);
+      final event = data.event;
+
+      // Only react to events that represent a genuine auth state change.
+      // Ignoring passwordRecovery to avoid routing side-effects.
+      if (event == AuthChangeEvent.initialSession ||
+          event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.signedOut ||
+          event == AuthChangeEvent.tokenRefreshed ||
+          event == AuthChangeEvent.userUpdated) {
+        state = AsyncValue.data(data.session?.user);
+      }
     });
   }
 

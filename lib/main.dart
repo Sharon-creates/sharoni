@@ -80,8 +80,55 @@ class MyApp extends ConsumerWidget {
             ),
           );
         },
-        loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-        error: (e, st) => const LoginPage(), // Fallback to login on root errors
+        loading: () => const _SplashScreen(),
+        error: (e, st) => Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                const Text('Something went wrong on startup.'),
+                const SizedBox(height: 8),
+                Text('$e', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown while [AuthController] is in its loading state (waiting for
+/// Supabase to restore the persisted session). Prevents a flash of the
+/// login screen before the token is confirmed.
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppTheme.primaryColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.health_and_safety, size: 72, color: Colors.white),
+            const SizedBox(height: 16),
+            const Text(
+              'Medicare',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+            const SizedBox(height: 40),
+            const CircularProgressIndicator(color: Colors.white),
+          ],
+        ),
       ),
     );
   }
